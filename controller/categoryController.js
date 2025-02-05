@@ -1,69 +1,49 @@
-import { errorResponse, successResponse } from "../helper/serverResponse.js";
-import {
-  createCategoryService,
-  deleteCategoryService,
-  getAllCategoriesService,
-  updateCategoryService,
-} from "../services/categoryServices.js";
+import categorymodel from "../model/categorymodel.js";
 
-export async function getallcategoryHandler(req, res) {
+// Get all categories
+export async function getAllCategoriesController() {
   try {
-    const category = await getAllCategoriesService();
-    if (!category) {
-      return errorResponse(res, 404, "category not found");
-    }
-    successResponse(res, "Success", category);
+    return await categorymodel.find();
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error fetching categories");
   }
 }
 
-export async function createcategoryHandler(req, res) {
+// Create a category
+export async function createCategoryController(categoryName) {
   try {
-    const { categoryName } = req.body;
-    if (!categoryName) {
-      return errorResponse(res, 400, "some params are missing");
+    const existingCategory = await categorymodel.findOne({ categoryName });
+    if (existingCategory) {
+      throw new Error("Category already exists");
     }
-    const category = await createCategoryService(categoryName);
-    successResponse(res, "success", category);
+
+    const category = await categorymodel.create({ categoryName });
+    return category;
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error(error.message || "Error creating category");
   }
 }
 
-export async function updatecategoryHandler(req, res) {
+// Update a category
+export async function updateCategoryController(id, updatedData) {
   try {
-    const { id } = req.params;
-    const updatedData = req.body;
-
-    if (!updatedData.categoryName) {
-      return errorResponse(res, 404, "some param are missing");
-    }
-
-    const updated = await updateCategoryService(id, updatedData);
-    successResponse(res, "success Updated", updated);
+    const updatedCategory = await categorymodel.findByIdAndUpdate(
+      id,
+      updatedData,
+      { new: true }
+    );
+    return updatedCategory;
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error updating category");
   }
 }
 
-export async function deletecategoryHandler(req, res) {
+// / Delete a category
+export async function deleteCategoryController(id) {
   try {
-    const { id } = req.body;
-    if (!id) {
-      return errorResponse(res, 404, "category ID not found");
-    }
-    const deletedCategory = await deleteCategoryService(id);
-    if (!deletedCategory) {
-      return errorResponse(res, 404, "Category not found");
-    }
-
-    successResponse(res, "category deleted successfully");
+    const deletedCategory = await categorymodel.findByIdAndDelete(id);
+    return deletedCategory;
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error deleting category");
   }
 }

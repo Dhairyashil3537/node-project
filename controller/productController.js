@@ -1,82 +1,57 @@
-import { errorResponse, successResponse } from "../helper/serverResponse.js";
-import {
-  addProductService,
-  deleteProductService,
-  getAllProductsService,
-  updateProductService,
-} from "../services/productServices.js";
+import productmodel from "../model/productmodel.js";
 
-export async function getallproductHandler(req, res) {
+// Get all products with category details
+export async function getAllProductsController() {
   try {
-    const products = await getAllProductsService();
-    if (products.length === 0) {
-      return errorResponse(res, 404, "No products found");
-    }
-    successResponse(res, "Success", products);
+    return await productmodel.aggregate([
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryid",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      {
+        $unwind: "$categoryDetails",
+      },
+      {
+        $project: {
+          productid: "$_id",
+          productName: 1,
+          categoryid: "$categoryDetails._id",
+          categoryName: "$categoryDetails.categoryName",
+        },
+      },
+    ]);
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error fetching products with categories");
   }
 }
 
-export async function addproductHandler(req, res) {
+// Add a new product
+export async function addProductController(productData) {
   try {
-    const { productName, description, quantity } = req.body;
-    if (!productName || !description || !quantity) {
-      return errorResponse(res, 400, "some params are missing");
-    }
-    const productData = {
-      productName,
-      description,
-      quantity,
-      categoryid,
-    };
-    const product = await addProductService(productData);
-    successResponse(res, "success", product);
+    return await productmodel.create(productData);
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error adding product");
   }
 }
 
-export async function updateproductHandler(req, res) {
+// Update a product
+export async function updateProductController(id, updatedData) {
   try {
-    const { id } = req.params;
-    const updatedData = req.body;
-    const options = { new: true };
-    if (
-      !updatedData.productName ||
-      !updatedData.description ||
-      !updatedData.quantity
-    ) {
-      return errorResponse(res, 404, "some param are missing");
-    }
-
-    const updatedProduct = await updateProductService(id, updatedData);
-    if (!updatedProduct) {
-      return errorResponse(res, 404, "Product not found");
-    }
-    successResponse(res, "success Updated", updated);
+    return await productmodel.findByIdAndUpdate(id, updatedData, { new: true });
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error updating product");
   }
 }
 
-export async function deleteproductHandler(req, res) {
+// Delete a product
+export async function deleteProductController(id) {
   try {
-    const { id } = req.body;
-    if (!id) {
-      return errorResponse(res, 404, "product ID not found");
-    }
-    const deletedProduct = await deleteProductService(id);
-    if (!deletedProduct) {
-      return errorResponse(res, 404, "Product not found");
-    }
-
-    successResponse(res, "product deleted successfully");
+    return await productmodel.findByIdAndDelete(id);
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error deleting product");
   }
 }

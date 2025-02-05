@@ -1,78 +1,60 @@
-import { errorResponse, successResponse } from "../helper/serverResponse.js";
-import {
-  createUserService,
-  deleteUserService,
-  getAllUsersService,
-} from "../services/userServices.js";
+import usermodel from "../model/usermodel.js";
 
-export async function getuserHandler(req, res) {
+// Get all users
+export async function getAllUsersController() {
   try {
-    const data = getAllUsersService();
-    if (!data) {
-      errorResponse(res, 404, "data not found");
-    }
-    successResponse(res, "Success", data);
+    const users = await usermodel.find();
+    return users;
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error fetching users from the database.");
   }
 }
 
-export async function createuserHandler(req, res) {
+// Create a new user
+export async function createUserController({
+  firstname,
+  lastname,
+  email,
+  mobile,
+}) {
   try {
-    const { firstname, lastname, email, mobile } = req.body;
-    if (!firstname || !lastname || !email || !mobile) {
-      errorResponse(res, 404, "some params are missing");
+    // Check if the user already exists
+    const existingUser = await usermodel.findOne({ email });
+    if (existingUser) {
+      throw new Error("User with this email already exists.");
     }
-    const data = await createUserService({
+
+    // Create new user
+    const newUser = await usermodel.create({
       firstname,
       lastname,
       email,
       mobile,
     });
-
-    successResponse(res, "Success", data);
+    return newUser;
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error(error.message || "Error creating user.");
   }
 }
 
-export async function udpateuserHandler(req, res) {
+// Update a user by ID
+export async function updateUserController(id, updatedData) {
   try {
-    const { id } = req.params;
-    const updatedData = req.body;
-    if (
-      !updatedData.firstname ||
-      !updatedData.lastname ||
-      !updatedData.email ||
-      !updatedData.mobile
-    ) {
-      return errorResponse(res, 400, "Some parameters are missing");
-    }
-
-    const updatedUser = await userService.updateUserService(id, updatedData);
-    if (!updatedUser) {
-      return errorResponse(res, 404, "User not found");
-    }
-
-    successResponse(res, "success Updated", updatedUser);
+    const updatedUser = await usermodel.findByIdAndUpdate(id, updatedData, {
+      new: true,
+    });
+    return updatedUser;
   } catch (error) {
-    console.log(error);
-    errorResponse(res, 500, "Internal server error ");
+    throw new Error("Error updating user.");
   }
 }
 
-export async function deleteuserHandler(req, res) {
+// Delete a user by ID
+export async function deleteUserController(id) {
   try {
-    const { id } = req.params;
-    const data = await deleteUserService(id);
-    if (!data) {
-      errorResponse(res, 404, "data not found");
-    }
-    successResponse(res, "success");
+    const deletedUser = await usermodel.findByIdAndDelete(id);
+    return deletedUser;
   } catch (error) {
-    console.log("error", error);
-    errorResponse(res, 500, "internal server error");
+    throw new Error("Error deleting user.");
   }
 }
